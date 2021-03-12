@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Add markers to a web map with a symbol layer</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.1.1/mapbox-gl.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1IjoicGxhdGVhZG9kZXYiLCJhIjoiY2ttNTluNHhpMGNkMzJ2b2plNjBxZzk0eiJ9.EJ6SwIQaHkx8M1TxzflPGQ';
+  var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v9',
+    center: [-46.68109742563057, -23.605733449055887],
+    zoom: 15
+  });
+
+  map.on('load', function () {
+    map.addSource('cells', {
+      "type": "geojson",
+      "data": "/osm-graph-sp-17.geojson",
+    });
+    // Add an image to use as a custom marker
+    map.loadImage(
+      'https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png',
+      function (error, image) {
+        if (error) throw error;
+        map.addImage('custom-marker', image);
+// Add a GeoJSON source with 2 points
+        map.addSource('points', {
+          'type': 'geojson',
+          'data': {
+            'type': 'FeatureCollection',
+            'features': [
+              {
+// feature for Mapbox DC
+                'type': 'Feature',
+                'geometry': {
+                  'type': 'Point',
+                  'coordinates': [
+                    -46.68109742563057, -23.605733449055887
+                  ]
+                },
+                'properties': {
+                  'title': 'Centro'
+                }
+              }
+            ]
+          }
+        });
+
+// Add a symbol layer
+        map.addLayer({
+          'id': 'points',
+          'type': 'symbol',
+          'source': 'points',
+          'layout': {
+            'icon-image': 'custom-marker',
+// get the title name from the source's "title" property
+            'text-field': ['get', 'title'],
+            'text-font': [
+              'Open Sans Semibold',
+              'Arial Unicode MS Bold'
+            ],
+            'text-offset': [0, 1.25],
+            'text-anchor': 'top'
+          }
+        });
+      }
+    );
+
+    map.addLayer({
+      'id': 'cell-fills',
+      'type': 'fill',
+      'source': 'cells',
+      'layout': {},
+      'paint': {
+        'fill-color': '#627BC1',
+        'fill-opacity': [
+          'case',
+          ['boolean', ['feature-state', 'hover'], false],
+          1,
+          0.5
+        ]
+      }
+    });
+
+    map.on('click', 'cell-fills', function (e) {
+      if (e.features.length > 0) {
+        console.log(e.features);
+        map.setFeatureState(
+          {source: 'cells', id: e.features[0].id},
+          {hover: true}
+        );
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
