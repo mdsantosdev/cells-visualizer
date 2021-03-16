@@ -70,6 +70,7 @@
 
     function handleCellClick(e) {
       if (e.features.length > 0) {
+        console.log(e.features);
         if (selectedFeature !== null) {
           map.setFeatureState({source: 'cells', id: selectedFeature}, {hover: false});
         }
