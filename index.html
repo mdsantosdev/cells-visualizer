@@ -69,8 +69,9 @@
     }
 
     function handleCellClick(e) {
+      console.log("Click in", e.lngLat);
       if (e.features.length > 0) {
-        console.log("Event", e);
+        console.log("Click in cell id", e.features[0].id);
         if (selectedFeature !== null) {
           map.setFeatureState({source: 'cells', id: selectedFeature}, {hover: false});
         }
