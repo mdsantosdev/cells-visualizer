@@ -23,11 +23,12 @@
 <body>
 <div id="map"></div>
 <script>
+  window.appConfig = {radius: 100};
   mapboxgl.accessToken = 'pk.eyJ1IjoicGxhdGVhZG9kZXYiLCJhIjoiY2ttNTluNHhpMGNkMzJ2b2plNjBxZzk0eiJ9.EJ6SwIQaHkx8M1TxzflPGQ';
   var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v9',
-    center: [-46.6482073415646, -23.583538250690313 ],
+    center: [-46.6482073415646, -23.583538250690313],
     zoom: 11
   });
 
@@ -43,7 +44,12 @@
       'source': 'cells',
       'layout': {},
       'paint': {
-        'fill-color': '#627BC1',
+        'fill-color': [
+          'case',
+          ['boolean', ['feature-state', 'affected'], false],
+          '#7ae491',
+          '#627BC1'
+        ],
         'fill-opacity': [
           'case',
           ['boolean', ['feature-state', 'hover'], false],
@@ -53,16 +59,33 @@
       }
     });
 
-    map.on('click', 'cell-fills', function (e) {
+    let selectedFeature = null;
+
+    function fetchAffectedCells(lat, lng, cb) {
+      fetch(`https://geo-stores-routing.herokuapp.com/geo-stores-routing/v1/cells?lat=${lat}&lng=${lng}&radius=${window.appConfig.radius}`)
+        .then(response => response.json())
+        .then(data => cb(data));
+    }
+
+    function handleCellClick(e) {
       if (e.features.length > 0) {
-        console.log(e.features);
-        map.setFeatureState(
-          {source: 'cells', id: e.features[0].id},
-          {hover: true}
-        );
+        if (selectedFeature !== null) {
+          map.setFeatureState({source: 'cells', id: selectedFeature}, {hover: false});
+        }
+        selectedFeature = e.features[0].id;
+        map.setFeatureState({source: 'cells', id: selectedFeature}, {hover: true});
+        const {lat, lng} = e.lngLat;
+        fetchAffectedCells(lat, lng, (data) => {
+          if (data.cells !== null) {
+            data.cells.forEach((cellID) => map.setFeatureState({source: 'cells', id: cellID}, {affected: true}))
+          }
+        });
       }
-    });
+    }
+
+    map.on('click', 'cell-fills', handleCellClick);
   });
+
 </script>
 
 </body>
