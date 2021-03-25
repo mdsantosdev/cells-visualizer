@@ -24,23 +24,26 @@
 <body>
 <div id="map"></div>
 <script>
-  window.appConfig = {radius: 2500};
   mapboxgl.accessToken = 'pk.eyJ1IjoicGxhdGVhZG9kZXYiLCJhIjoiY2ttNTluNHhpMGNkMzJ2b2plNjBxZzk0eiJ9.EJ6SwIQaHkx8M1TxzflPGQ';
-  var map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v9',
-    center: [-46.6482073415646, -23.583538250690313],
-    zoom: 11
-  });
-  var coverageRadius = null;
+  window.app = {
+    radius: 2500,
+    coverageRadius: null,
+    affectedCells: [],
+    map: new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/dark-v9',
+      center: [-46.6482073415646, -23.583538250690313],
+      zoom: 11
+    })
+  };
 
-  map.on('load', function () {
-    map.addSource('cells', {
+  window.app.map.on('load', function () {
+    window.app.map.addSource('cells', {
       "type": "geojson",
       "data": "/cells-visualizer/osm-graph-sp-17.geojson",
     });
 
-    map.addLayer({
+    window.app.map.addLayer({
       'id': 'cell-fills',
       'type': 'fill',
       'source': 'cells',
@@ -60,52 +63,50 @@
         ]
       }
     });
-    
-    let selectedFeature = null;
-    let affectedFeatures = [];
 
     function fetchAffectedCells(lat, lng, cb) {
-      fetch(`https://geo-stores-routing.herokuapp.com/geo-stores-routing/v1/cells?lat=${lat}&lng=${lng}&radius=${window.appConfig.radius}`)
+      fetch(`https://geo-stores-routing.herokuapp.com/geo-stores-routing/v1/cells?lat=${lat}&lng=${lng}&radius=${window.app.radius}`)
         .then(response => response.json())
         .then(data => cb(data));
     }
 
     function handleClick(e) {
       const {lat, lng} = e.lngLat;
-      if(coverageRadius !== null) {
-	coverageRadius.remove();
+      if (window.app.coverageRadius !== null) {
+        window.app.coverageRadius.remove();
       }
-      coverageRadius = createCircle(e.lngLat);
+      window.app.coverageRadius = createCircle(e.lngLat).addTo(window.app.map);
       fetchAffectedCells(lat, lng, (data) => {
-        affectedFeatures.forEach((cellID) => {
-          map.setFeatureState({source: 'cells', id: cellID}, {affected: false})
-        })
-        affectedFeatures = [];
+        removeAffectedCells();
         if (data.cells !== null) {
-          data.cells.forEach((cellID) => {
-            map.setFeatureState({source: 'cells', id: cellID}, {affected: true})
-            affectedFeatures.push(cellID);
-          })
+          markCellsAsAffected(data.cells);
         }
       });
     }
 
-    map.on('click', handleClick);
+    window.app.map.on('click', handleClick);
+
     function createCircle(position) {
-      var circle = new MapboxCircle(position, window.appConfig.radius, {
-	  editable: false,
-	  minRadius: window.appConfig.radius,
-	  fillColor: '#29AB87'
-	}).addTo(map);
-      circle.on('centerchanged', function(circleObj){
-	console.log("New center", circleObj.getCenter());
+      return new MapboxCircle(position, window.app.radius, {
+        editable: false,
+        minRadius: window.app.radius,
+        fillColor: '#29AB87'
       });
-      circle.on('radiuschanged', function(circleObj){
-	console.log("New radius", circleOBj.getRadius());
-      });
-      return circle
     }
 
+    function removeAffectedCells() {
+      window.app.affectedCells.forEach((cellID) => {
+        window.app.map.setFeatureState({source: 'cells', id: cellID}, {affected: false})
+      });
+      window.app.affectedCells = [];
+    }
+
+    function markCellsAsAffected(cells) {
+      cells.forEach((cellID) => {
+        window.app.map.setFeatureState({source: 'cells', id: cellID}, {affected: true})
+        window.app.affectedCells.push(cellID);
+      });
+    }
   });
 
 </script>
